@@ -30,7 +30,14 @@
   const msg = t => { document.getElementById('msg').textContent = t || ''; };
   // stesso riconoscimento del lettore NETUM: il QR contiene ...?start=P_<posto> oppure ...?start=S_<sfrido>
   const valido = t => /start.{0,2}?([PS]).(.+)$/i.test(t || '');
-  function manda(testo) { tg.sendData(testo); } // il bot lo riceve come se fosse stato letto dal lettore; la pagina si chiude
+  // apre il link del QR nella chat del bot: Telegram manda «/start P_xx» o «/start S_S-xxxx», come quando si inquadra con la fotocamera del telefono
+  function manda(testo) {
+    const m = /start.{0,2}?([PS]).(.+)$/i.exec(testo || '');
+    if (!m) return;
+    const link = 'https://t.me/DiTillioLaserBot?start=' + m[1].toUpperCase() + '_' + m[2].trim().replace(/[^A-Za-z0-9]/g, '-');
+    tg.openTelegramLink(link);
+    setTimeout(() => tg.close(), 500);
+  }
   function scan() {
     msg('');
     if (!tg || !tg.showScanQrPopup) { msg('Apri questa pagina dal tasto «📷 Leggi QR» nella chat del bot.'); return; }
