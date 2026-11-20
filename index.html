@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Leggi QR – Laser Di Tillio</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  body { margin: 0; font-family: -apple-system, system-ui, sans-serif; background: var(--tg-theme-bg-color, #fff); color: var(--tg-theme-text-color, #111); text-align: center; padding: 28px 18px; }
+  h1 { font-size: 22px; margin: 0 0 8px; }
+  p { color: var(--tg-theme-hint-color, #666); font-size: 15px; margin: 0 0 22px; }
+  button { display: block; width: 100%; max-width: 360px; margin: 0 auto 12px; padding: 16px; font-size: 19px; border: 0; border-radius: 12px;
+           background: var(--tg-theme-button-color, #2481cc); color: var(--tg-theme-button-text-color, #fff); }
+  button.sec { background: var(--tg-theme-secondary-bg-color, #eee); color: var(--tg-theme-text-color, #111); font-size: 16px; }
+  #msg { min-height: 22px; font-size: 15px; color: #b91c1c; margin-bottom: 14px; }
+  input { width: 100%; max-width: 360px; box-sizing: border-box; padding: 12px; font-size: 18px; border-radius: 10px; border: 1px solid #ccc; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+  <h1>📷 Leggi QR</h1>
+  <p>Inquadra il QR del posto o la targhetta dello sfrido.</p>
+  <div id="msg"></div>
+  <button id="scan">Inquadra il QR</button>
+  <details style="max-width:360px;margin:18px auto 0;text-align:left">
+    <summary style="color:var(--tg-theme-hint-color,#666)">QR rovinato? Scrivi il codice</summary>
+    <div style="margin-top:10px"><input id="cod" placeholder="es. B3 oppure S-0017"><button class="sec" id="send">Manda</button></div>
+  </details>
+<script>
+  const tg = window.Telegram && window.Telegram.WebApp;
+  const msg = t => { document.getElementById('msg').textContent = t || ''; };
+  // stesso riconoscimento del lettore NETUM: il QR contiene ...?start=P_<posto> oppure ...?start=S_<sfrido>
+  const valido = t => /start.{0,2}?([PS]).(.+)$/i.test(t || '');
+  function manda(testo) { tg.sendData(testo); } // il bot lo riceve come se fosse stato letto dal lettore; la pagina si chiude
+  function scan() {
+    msg('');
+    if (!tg || !tg.showScanQrPopup) { msg('Apri questa pagina dal tasto «📷 Leggi QR» nella chat del bot.'); return; }
+    if (tg.isVersionAtLeast && !tg.isVersionAtLeast('6.4')) { msg('Aggiorna Telegram: questa versione non ha la fotocamera QR.'); return; }
+    tg.showScanQrPopup({ text: 'Inquadra il QR del posto o dello sfrido' }, t => {
+      if (valido(t)) { manda(t); return true; }
+      msg('Questo QR non è un posto né uno sfrido del laser.');
+      return true;
+    });
+  }
+  document.getElementById('scan').onclick = scan;
+  document.getElementById('send').onclick = () => {
+    let v = document.getElementById('cod').value.trim().toUpperCase();
+    if (/^[A-Z]{1,2}\d+[A-I]$/.test(v)) v = v.slice(0, -1) + v.slice(-1).toLowerCase(); // B3A -> B3a (bancale)
+    if (!v) return;
+    let k = /^S-?\d+$/i.test(v) ? 'S_S-' + v.replace(/\D/g, '').padStart(4, '0') : 'P_' + v.replace(/[^A-Za-z0-9]/g, '-');
+    manda('https://t.me/DiTillioLaserBot?start=' + k);
+  };
+  if (tg) { tg.ready(); tg.expand(); setTimeout(scan, 300); } // si apre già la fotocamera
+</script>
+</body>
+</html>
